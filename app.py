@@ -1,3 +1,4 @@
+from email import header
 from urllib import response
 from flask import Flask, request
 import json
@@ -9,9 +10,22 @@ app = Flask(__name__)
 
 def initilizeConnection():
     print("Initializing connection")
-    connection = psycopg2.connect(DATABASE_URL, sslmode='require')
+    connection = psycopg2.connect("dbname=postgres user=postgres password=admin")
     cursor = connection.cursor()
     return connection, cursor
+
+@app.before_request
+def authHandler():
+    header = request.headers
+    
+    try :
+        if header['appKey'] == 'vlone':
+            print("API call is verified")
+    except Exception as E:
+        return "",401
+    
+
+    
 
 @app.after_request
 def handlerCORS(response):
@@ -21,7 +35,7 @@ def handlerCORS(response):
         response.headers["Status Code"] = "200 OK"
         response.headers["Access-Control-Allow-Origin"] = "*"
         response.headers["Content-Type"] = "application/json"
-        response.headers["Access-Control-Allow-Headers"] = "*"
+        response.headers["Access-Control-Allow-Headers"] = "appKey"
         response.headers["Access-Control-Allow-Methods"] = "*"     
         response.headers["Access-Control-Allow-Origin"] = "*"
 
@@ -31,11 +45,31 @@ def handlerCORS(response):
 def hello():
     return 'Hello World'
 
-@app.route('/testInput',methods=['POST'])
-def test():
+@app.route('/registeruser',methods=['POST'])
+def register():
     data = request.get_json()
-    
-    return json.dumps(data)
+    connection, cursor  = initilizeConnection()
+    cursor.execute("insert into bitpasar.users(name,email,phonenum,address1,address2,city,state,zipcode,walletid) values ('%s', '%s', '%s','%s','%s','%s','%s','%s','%s')"%(data['name'], data['email'], data['phonenum'], data['address1'], data['address2'], data['city'], data['state'], data['zipcode'], data['walletid']))
+    connection.commit()
+    cursor.execute("select * from bitpasar.users where walletid='%s'"% data['walletid'])
+    response = cursor.fetchall()
+    finalResp = {}
+    for row in response:
+
+            finalResp[row[0]]={}
+            finalResp[row[0]]['name'] = row[1]
+            finalResp[row[0]]['email'] = row[2]
+            finalResp[row[0]]['phonenum'] = row[3]
+            finalResp[row[0]]['address1'] = row[4]
+            finalResp[row[0]]['address2'] = row[5]
+            finalResp[row[0]]['city'] = row[6]
+            finalResp[row[0]]['state'] = row[7]
+            finalResp[row[0]]['zipcode'] = row[8]
+            finalResp[row[0]]['walletid'] = row[9]
+            
+
+            #print (finalResp)
+    return json.dumps(finalResp)
 
 
 if __name__ == '__main__':
