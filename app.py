@@ -1,4 +1,4 @@
-from email import header
+from email import header, message
 from urllib import response
 from flask import Flask, request
 import json
@@ -50,27 +50,46 @@ def hello():
 def register():
     data = request.get_json()
     connection, cursor  = initilizeConnection()
-    cursor.execute("insert into bitpasar.users(name,email,phonenum,address1,address2,city,state,zipcode,walletid) values ('%s', '%s', '%s','%s','%s','%s','%s','%s','%s')"%(data['name'], data['email'], data['phonenum'], data['address1'], data['address2'], data['city'], data['state'], data['zipcode'], data['walletid']))
-    connection.commit()
-    cursor.execute("select * from bitpasar.users where walletid='%s'"% data['walletid'])
+    userAccountInDB = verifyUserAccount(cursor,data['walletid'] )
+    if userAccountInDB == 'True':
+        cursor.execute("insert into bitpasar.users(name,email,phonenum,address1,address2,city,state,zipcode,walletid) values ('%s', '%s', '%s','%s','%s','%s','%s','%s','%s')"%(data['name'], data['email'], data['phonenum'], data['address1'], data['address2'], data['city'], data['state'], data['zipcode'], data['walletid']))
+        connection.commit()
+        cursor.execute("select * from bitpasar.users where walletid='%s'"% data['walletid'])
+        response = cursor.fetchall()
+        finalResp = {}
+        for row in response:
+
+                finalResp[row[0]]={}
+                finalResp[row[0]]['name'] = row[1]
+                finalResp[row[0]]['email'] = row[2]
+                finalResp[row[0]]['phonenum'] = row[3]
+                finalResp[row[0]]['address1'] = row[4]
+                finalResp[row[0]]['address2'] = row[5]
+                finalResp[row[0]]['city'] = row[6]
+                finalResp[row[0]]['state'] = row[7]
+                finalResp[row[0]]['zipcode'] = row[8]
+                finalResp[row[0]]['walletid'] = row[9]
+                
+
+                #print (finalResp)
+        return json.dumps(finalResp)
+    else:
+        message = {
+            "status" : "denied",
+            "message" : "The wallet is already created an account"
+        }
+
+        return json.dumps(message)
+
+def verifyUserAccount(cursor,walletid):
+    cursor.execute("select * from bitpasar.users where walletid='%s'"% walletid)
     response = cursor.fetchall()
-    finalResp = {}
-    for row in response:
-
-            finalResp[row[0]]={}
-            finalResp[row[0]]['name'] = row[1]
-            finalResp[row[0]]['email'] = row[2]
-            finalResp[row[0]]['phonenum'] = row[3]
-            finalResp[row[0]]['address1'] = row[4]
-            finalResp[row[0]]['address2'] = row[5]
-            finalResp[row[0]]['city'] = row[6]
-            finalResp[row[0]]['state'] = row[7]
-            finalResp[row[0]]['zipcode'] = row[8]
-            finalResp[row[0]]['walletid'] = row[9]
-            
-
-            #print (finalResp)
-    return json.dumps(finalResp)
+    if response:
+        '''This means that the User is in the DB'''
+        return ("False")
+    else:
+        '''This means that the database is null'''
+        return ("True")
 
 
 if __name__ == '__main__':
