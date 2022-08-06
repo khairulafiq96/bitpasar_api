@@ -17,14 +17,15 @@ def initilizeConnection():
 @app.before_request
 def authHandler():
     header = request.headers
-    
     try :
         if header['appKey'] == 'vlone':
             print("API call is verified")
+            
     except Exception as E:
-        return "",401
-    
-
+        if request.method == 'OPTIONS':
+            print(request.method)
+        else:
+            return "",401
     
 
 @app.after_request
@@ -35,7 +36,7 @@ def handlerCORS(response):
         response.headers["Status Code"] = "200 OK"
         response.headers["Access-Control-Allow-Origin"] = "*"
         response.headers["Content-Type"] = "application/json"
-        response.headers["Access-Control-Allow-Headers"] = "appKey"
+        response.headers["Access-Control-Allow-Headers"] = "appKey,Content-Type"
         response.headers["Access-Control-Allow-Methods"] = "*"     
         response.headers["Access-Control-Allow-Origin"] = "*"
 
