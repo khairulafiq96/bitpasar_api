@@ -3,6 +3,7 @@ from urllib import response
 from flask import Flask, request
 import json
 import psycopg2
+import base64
 
 app = Flask(__name__)
 
@@ -49,6 +50,7 @@ def hello():
 @app.route('/registeruser',methods=['POST'])
 def register():
     data = request.get_json()
+    #print(data)
     connection, cursor  = initilizeConnection()
     userAccountInDB = verifyUserAccount(cursor,data['walletid'] )
     if userAccountInDB == 'True':
@@ -91,6 +93,30 @@ def verifyUserAccount(cursor,walletid):
         '''This means that the database is null'''
         return ("True")
 
+@app.route('/addItem', methods=['POST'])
+def addNewItem():
+    data = request.get_json()
+    connection, cursor  = initilizeConnection()
+
+    '''Converting the long description to binary base64 for the bytea column in postgres, would reqquire refactoring'''
+    longdesc64 = data['longdescription'].encode('utf-8')
+    longdescencoded = base64.b64encode(longdesc64)
+    longdescencoded = longdescencoded.decode('utf-8')
+
+    '''To decode to text, just directly decode the string
+        longdesc64 = data['longdescription'].encode('utf-8')
+        longdescencoded = longdesc64.decode('utf-8')
+    '''
+
+    cursor.execute("""INSERT INTO bitpasar.items(ownerid, title, type, shortdescription, longdescription, itemprice, status, postagename, postageprice, images) VALUES ('%s', '%s', '%s','%s', '%s', '%s', '%s', '%s', '%s', ARRAY %s)"""%(data['ownerid'],data['title'],data['type'],data['shortdescription'],longdescencoded,data['itemprice'],data['status'],data['postagename'],data['postageprice'],data['images'] ) )
+    connection.commit()
+
+    message = {
+        "status" : "successful",
+        "message" : "The item "+data['title']+" has been successfully added into the marketplace"
+    }
+
+    return json.dumps(message)
 
 if __name__ == '__main__':
     app.run
