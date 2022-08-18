@@ -4,6 +4,8 @@ from flask import Flask, request
 import json
 import psycopg2
 import base64
+import math
+import calendar
 
 app = Flask(__name__)
 
@@ -14,6 +16,9 @@ def initilizeConnection():
     connection = psycopg2.connect("dbname=postgres user=postgres password=admin")
     cursor = connection.cursor()
     return connection, cursor
+
+def convertUTC(dt):
+    return calendar.timegm(dt.utctimetuple())
 
 @app.before_request
 def authHandler():
@@ -83,6 +88,7 @@ def register():
 
         return json.dumps(message)
 
+'''Verify the user in the database'''
 def verifyUserAccount(cursor,walletid):
     cursor.execute("select * from bitpasar.users where walletid='%s'"% walletid)
     response = cursor.fetchall()
@@ -93,6 +99,7 @@ def verifyUserAccount(cursor,walletid):
         '''This means that the database is null'''
         return ("True")
 
+'''Add new item to the marketplace'''
 @app.route('/addItem', methods=['POST'])
 def addNewItem():
     data = request.get_json()
@@ -117,6 +124,54 @@ def addNewItem():
     }
 
     return json.dumps(message)
+
+@app.route('/getAllMarketplace', methods=['GET'])
+def getMarketplace():
+    data = request.get_json()
+    connection, cursor  = initilizeConnection()
+
+    totalPages = calculateTotalPages(cursor)
+
+    '''Variable to calculate the offset, example...(Page 1,0 Offset),(Page 2, 5 OffSet), (Page 3, 10 Offset)
+        Therefore the calculation is (PageNum - 1)*5(Total number of items per page = 5)
+    '''
+    offsetVal = (int(data['page']) - 1) * 5
+    cursor.execute("""SELECT * FROM bitpasar.items WHERE status = 'new' ORDER BY timestamp ASC LIMIT 5 OFFSET %s"""%offsetVal)
+    response = cursor.fetchall()
+    'print(response)'
+    finalResp =  {}
+    for row in response:
+        finalResp[row[0]] = {}
+        finalResp[row[0]]['ownerid'] = row[1]
+        finalResp[row[0]]['title'] = row[2]
+        finalResp[row[0]]['type'] = row[3]
+        finalResp[row[0]]['shortdescription'] = row[4]
+        finalResp[row[0]]['itemprice'] = row[5]
+        finalResp[row[0]]['status'] = row[6]
+        finalResp[row[0]]['postagename'] = row[7]
+        finalResp[row[0]]['postageprice'] = row[8]
+        finalResp[row[0]]['images'] = row[9]
+        finalResp[row[0]]['longdescription'] = decodeLongDescription(row[10])
+        finalResp[row[0]]['timestamp'] = convertUTC(row[11])
+
+
+    return json.dumps(finalResp)
+
+'''Decoding to Base64, Highly inneficient, please refactor'''
+def decodeLongDescription(memory):
+    longdescencoded = memory.tobytes()
+    longdescencoded = base64.b64decode(longdescencoded)
+    longdescencoded = longdescencoded.decode('utf-8')
+    return longdescencoded
+
+'''Calculate total pages needed for all of the items'''
+def calculateTotalPages(cursor):
+    cursor.execute("""SELECT Count(*) FROM bitpasar.items WHERE status = 'new'""")
+    '''Just getting one row of data'''
+    rowcount = cursor.fetchone()[0]
+    totalPages = math.ceil(rowcount/5)
+    return totalPages
+
 
 if __name__ == '__main__':
     app.run
