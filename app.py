@@ -1,4 +1,5 @@
 from email import header, message
+from typing import final
 from urllib import response
 from flask import Flask, request
 import json
@@ -115,7 +116,7 @@ def addNewItem():
         longdescencoded = longdesc64.decode('utf-8')
     '''
 
-    cursor.execute("""INSERT INTO bitpasar.items(ownerid, title, type, shortdescription, longdescription, itemprice, status, postagename, postageprice, images) VALUES ('%s', '%s', '%s','%s', '%s', '%s', '%s', '%s', '%s', ARRAY %s)"""%(data['ownerid'],data['title'],data['type'],data['shortdescription'],longdescencoded,data['itemprice'],data['status'],data['postagename'],data['postageprice'],data['images'] ) )
+    cursor.execute("""INSERT INTO bitpasar.items(ownerid, title, type, shortdescription, longdescription, itemprice, status, postagename, postageprice, images) VALUES ('%s', '%s', '%s','%s', '%s', '%s', '%s', '%s', '%s', ARRAY %s)"""%(data['ownerid'],data['title'].lower(),data['type'].lower(),data['shortdescription'].lower(),longdescencoded,data['itemprice'],data['status'],data['postagename'],data['postageprice'],data['images'] ) )
     connection.commit()
 
     message = {
@@ -125,18 +126,17 @@ def addNewItem():
 
     return json.dumps(message)
 
-@app.route('/getAllMarketplace', methods=['GET'])
-def getMarketplace():
+'''This route returns the all items and search results for the marketplace page, For All Items, search = null, this will not effect the LIKE statement'''
+@app.route('/getFilteredMarketplace', methods=['POST'])
+def getFilteredMarketplace():
     data = request.get_json()
     connection, cursor  = initilizeConnection()
-
-    totalPages = calculateTotalPages(cursor)
 
     '''Variable to calculate the offset, example...(Page 1,0 Offset),(Page 2, 5 OffSet), (Page 3, 10 Offset)
         Therefore the calculation is (PageNum - 1)*5(Total number of items per page = 5)
     '''
     offsetVal = (int(data['page']) - 1) * 5
-    cursor.execute("""SELECT * FROM bitpasar.items WHERE status = 'new' ORDER BY timestamp ASC LIMIT 5 OFFSET %s"""%offsetVal)
+    cursor.execute("""SELECT * FROM bitpasar.items INNER JOIN bitpasar.users ON bitpasar.items.ownerid = bitpasar.users.id WHERE bitpasar.items.status = 'new' AND bitpasar.items.title LIKE '%%%s%%' ORDER BY bitpasar.items.timestamp ASC LIMIT 5 OFFSET %s"""%(data['search'],offsetVal))
     response = cursor.fetchall()
     'print(response)'
     finalResp =  {}
@@ -153,6 +153,10 @@ def getMarketplace():
         finalResp[row[0]]['images'] = row[9]
         finalResp[row[0]]['longdescription'] = decodeLongDescription(row[10])
         finalResp[row[0]]['timestamp'] = convertUTC(row[11])
+        finalResp[row[0]]['ownername'] = row[13]
+        finalResp[row[0]]['walletid'] = row[21]
+        finalResp[row[0]]['phonenum'] = row[15]
+        finalResp[row[0]]['location'] = row[19]
 
 
     return json.dumps(finalResp)
@@ -165,12 +169,26 @@ def decodeLongDescription(memory):
     return longdescencoded
 
 '''Calculate total pages needed for all of the items'''
-def calculateTotalPages(cursor):
-    cursor.execute("""SELECT Count(*) FROM bitpasar.items WHERE status = 'new'""")
+'''This function only needs to be run once, to get the total number of page to be displayed'''
+@app.route('/marketplacePageNum', methods=['POST'])
+def calculateTotalPages():
+    connection,cursor  = initilizeConnection()
+    data = request.get_json()
+
+    cursor.execute("""SELECT Count(*) FROM bitpasar.items WHERE status = 'new' AND title LIKE '%%%s%%' """%data['search'])
     '''Just getting one row of data'''
     rowcount = cursor.fetchone()[0]
     totalPages = math.ceil(rowcount/5)
-    return totalPages
+    count = 1
+    finalArr = []
+    while count <= totalPages:
+        finalArr.append(count)
+        count += 1
+
+    totalPages = {
+        "totalPage" : finalArr
+    }
+    return json.dumps(totalPages)
 
 
 if __name__ == '__main__':
