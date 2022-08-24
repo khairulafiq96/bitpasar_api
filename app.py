@@ -132,11 +132,38 @@ def getFilteredMarketplace():
     data = request.get_json()
     connection, cursor  = initilizeConnection()
 
-    '''Variable to calculate the offset, example...(Page 1,0 Offset),(Page 2, 5 OffSet), (Page 3, 10 Offset)
-        Therefore the calculation is (PageNum - 1)*5(Total number of items per page = 5)
-    '''
     offsetVal = (int(data['page']) - 1) * 5
     cursor.execute("""SELECT * FROM bitpasar.items INNER JOIN bitpasar.users ON bitpasar.items.ownerid = bitpasar.users.id WHERE bitpasar.items.status = 'new' AND bitpasar.items.title LIKE '%%%s%%' ORDER BY bitpasar.items.timestamp ASC LIMIT 5 OFFSET %s"""%(data['search'],offsetVal))
+    response = cursor.fetchall()
+    'print(response)'
+    finalResp =  {}
+    for row in response:
+        finalResp[row[0]] = {}
+        finalResp[row[0]]['ownerid'] = row[1]
+        finalResp[row[0]]['title'] = row[2]
+        finalResp[row[0]]['type'] = row[3]
+        finalResp[row[0]]['shortdescription'] = row[4]
+        finalResp[row[0]]['itemprice'] = row[5]
+        finalResp[row[0]]['status'] = row[6]
+        finalResp[row[0]]['postagename'] = row[7]
+        finalResp[row[0]]['postageprice'] = row[8]
+        finalResp[row[0]]['images'] = row[9]
+        finalResp[row[0]]['longdescription'] = decodeLongDescription(row[10])
+        finalResp[row[0]]['timestamp'] = convertUTC(row[11])
+        finalResp[row[0]]['ownername'] = row[13]
+        finalResp[row[0]]['walletid'] = row[21]
+        finalResp[row[0]]['phonenum'] = row[15]
+        finalResp[row[0]]['location'] = row[19]
+
+
+    return json.dumps(finalResp)
+
+'''This route returns the individual item details based on the item id if called'''
+@app.route('/getItemDetail', methods=['POST'])
+def getIndividualItemDetail():
+    data = request.get_json()
+    connection, cursor  = initilizeConnection()
+    cursor.execute("""SELECT * FROM bitpasar.items INNER JOIN bitpasar.users ON bitpasar.items.ownerid = bitpasar.users.id WHERE bitpasar.items.id = '%s' """%data['itemId'])
     response = cursor.fetchall()
     'print(response)'
     finalResp =  {}
