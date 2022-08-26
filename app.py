@@ -89,6 +89,41 @@ def register():
 
         return json.dumps(message)
 
+@app.route('/getUserDetails',methods=['POST'])
+def getUserDetails():
+    data = request.get_json()
+    #print(data)
+    connection, cursor  = initilizeConnection()
+    userAccountInDB = verifyUserAccount(cursor,data['walletid'] )
+    print(userAccountInDB)
+    if userAccountInDB == 'False':
+        cursor.execute("select * from bitpasar.users where walletid='%s'"% data['walletid'])
+        response = cursor.fetchall()
+        finalResp = {}
+        for row in response:
+
+                finalResp[row[0]]={}
+                finalResp[row[0]]['name'] = row[1]
+                finalResp[row[0]]['email'] = row[2]
+                finalResp[row[0]]['phonenum'] = row[3]
+                finalResp[row[0]]['address1'] = row[4]
+                finalResp[row[0]]['address2'] = row[5]
+                finalResp[row[0]]['city'] = row[6]
+                finalResp[row[0]]['state'] = row[7]
+                finalResp[row[0]]['zipcode'] = row[8]
+                finalResp[row[0]]['walletid'] = row[9]
+                
+
+                #print (finalResp)
+        return json.dumps(finalResp)
+    else:
+        message = {
+            "status" : "unregistered",
+            "message" : "Do update your contact details and address for autofill features. Update your details at the User Profile Page"
+        }
+
+        return json.dumps(message)
+
 '''Verify the user in the database'''
 def verifyUserAccount(cursor,walletid):
     cursor.execute("select * from bitpasar.users where walletid='%s'"% walletid)
