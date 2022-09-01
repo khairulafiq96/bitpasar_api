@@ -252,6 +252,31 @@ def calculateTotalPages():
     }
     return json.dumps(totalPages)
 
+@app.route('/createOrder',methods=['POST'])
+def postCreateOrder():
+    data = request.get_json()
+    #print(data)
+    connection, cursor  = initilizeConnection()
+
+  
+    cursor.execute('''INSERT INTO bitpasar.orders (
+                        buyername, buyerwallet, ownername, ownerwallet, address1, address2, 
+                        city, state, zipcode, postagename, postageprice, buyeremail, buyerphonenum, 
+                        itemid, ownerid, buyerid, status) VALUES ('%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s')'''
+                        %(data['buyername'], data['buyerwallet'], data['ownername'], data['ownerwallet'], data['address1'], data['address2'], 
+                        data['city'], data['state'], data['zipcode'], data['postagename'], data['postageprice'], data['buyeremail'], 
+                        data['buyerphonenum'], data['itemid'], data['ownerid'], data['buyerid'], data['status']))
+    connection.commit()
+
+    message = {
+    "status" : "successful",
+    "message" : "The item has been successfully paid. Please download your receipt for future reference. The seller has been notified to ship your item"
+    }
+    
+    return json.dumps(message)
+
+
+    
 
 if __name__ == '__main__':
     app.run
