@@ -89,6 +89,38 @@ def register():
 
         return json.dumps(message)
 
+@app.route('/updateUserDetails',methods=['POST'])
+def updateDetails():
+    data = request.get_json()
+    #print(data)
+    connection, cursor  = initilizeConnection()
+    cursor.execute("""UPDATE bitpasar.users
+                    SET name='%s',email='%s',phonenum='%s',address1='%s',address2='%s',city='%s',state='%s',zipcode='%s'
+                    WHERE walletid='%s';"""%(
+                        data['name'], data['email'], data['phonenum'], data['address1'], data['address2'], 
+                        data['city'], data['state'], data['zipcode'], data['walletid']))
+    connection.commit()
+    cursor.execute("select * from bitpasar.users where walletid='%s'"% data['walletid'])
+    response = cursor.fetchall()
+    finalResp = {}
+    for row in response:
+
+            finalResp[row[0]]={}
+            finalResp[row[0]]['name'] = row[1]
+            finalResp[row[0]]['email'] = row[2]
+            finalResp[row[0]]['phonenum'] = row[3]
+            finalResp[row[0]]['address1'] = row[4]
+            finalResp[row[0]]['address2'] = row[5]
+            finalResp[row[0]]['city'] = row[6]
+            finalResp[row[0]]['state'] = row[7]
+            finalResp[row[0]]['zipcode'] = row[8]
+            finalResp[row[0]]['walletid'] = row[9]
+            
+
+            #print (finalResp)
+    return json.dumps(finalResp)
+
+
 @app.route('/getUserDetails',methods=['POST'])
 def getUserDetails():
     data = request.get_json()
@@ -275,7 +307,32 @@ def postCreateOrder():
     
     return json.dumps(message)
 
-
+@app.route('/getUserPurchases',methods=['POST'])
+def userPurchase():
+    data = request.get_json()
+    #print(data)
+    connection, cursor  = initilizeConnection()
+    cursor.execute("""SELECT orders.id,items.title, items.shortdescription,items.itemprice,orders.status,items.images,orders.timestamp, users.name as ownername, users.phonenum, users.walletid
+                        FROM bitpasar.items AS items 
+                        JOIN bitpasar.orders AS orders ON items.id = orders.itemid
+                        JOIN bitpasar.users AS users ON items.ownerid = users.id
+                        WHERE orders.buyerwallet = '%s'"""%data['walletid'])
+    response = cursor.fetchall()
+    finalResp = {}
+    for row in response:
+            finalResp[row[0]] = {}
+            finalResp[row[0]]['title'] = row[1]
+            finalResp[row[0]]['shortdescription'] = row[2]
+            finalResp[row[0]]['itemprice'] = row[3]
+            finalResp[row[0]]['status'] = row[4]
+            finalResp[row[0]]['images'] = row[5][0]
+            finalResp[row[0]]['timestamp'] = convertUTC(row[6])
+            finalResp[row[0]]['ownername'] = row[7]
+            finalResp[row[0]]['ownerphonenum'] = row[8]
+            finalResp[row[0]]['ownerwallet'] = row[9]
+            
+            #print (finalResp)
+    return json.dumps(finalResp)
     
 
 if __name__ == '__main__':
