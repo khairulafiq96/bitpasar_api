@@ -333,6 +333,67 @@ def userPurchase():
             
             #print (finalResp)
     return json.dumps(finalResp)
+
+@app.route('/getAllAds',methods=['POST'])
+def userToShipItems():
+    data = request.get_json()
+    #print(data)
+    connection, cursor  = initilizeConnection()
+    cursor.execute("""SELECT orders.id,items.title, items.shortdescription,items.itemprice,orders.status,items.images,orders.timestamp,
+                    orders.buyername as buyername, orders.buyerphonenum, orders.buyerwallet, orders.address1, orders.address2, 
+                    orders.city, orders.state, orders.zipcode, orders.postagename, orders.postageprice
+                    FROM bitpasar.items AS items 
+                    JOIN bitpasar.orders AS orders ON items.id = orders.itemid
+                    WHERE orders.ownerwallet = '%s'"""%data['walletid'])
+    response = cursor.fetchall()
+    finalResp = {}
+    for row in response:
+            finalResp[row[0]] = {}
+            finalResp[row[0]]['title'] = row[1]
+            finalResp[row[0]]['shortdescription'] = row[2]
+            finalResp[row[0]]['itemprice'] = row[3]
+            finalResp[row[0]]['status'] = row[4]
+            finalResp[row[0]]['images'] = row[5][0]
+            finalResp[row[0]]['timestamp'] = convertUTC(row[6])
+            finalResp[row[0]]['buyername'] = row[7]
+            finalResp[row[0]]['buyerphonenum'] = row[8]
+            finalResp[row[0]]['buyerwallet'] = row[9]
+            finalResp[row[0]]['address1'] = row[10]
+            finalResp[row[0]]['address2'] = row[11]
+            finalResp[row[0]]['city'] = row[12]
+            finalResp[row[0]]['state'] = row[13]
+            finalResp[row[0]]['zipcode'] = row[14]
+            finalResp[row[0]]['postagename'] = row[15]
+            finalResp[row[0]]['postageprice'] = row[16]
+            
+            #print (finalResp)
+    return json.dumps(finalResp)
+
+@app.route('/updateOrderTracker',methods=['POST'])
+def updateOrderTracker():
+    data = request.get_json()
+    #print(data)
+    connection, cursor  = initilizeConnection()
+    cursor.execute("""UPDATE bitpasar.orders SET 
+                      status='shipped' , trackerid='%s' WHERE id = '%s'"""%(
+                        data['trackerid'], data['orderid']))
+    connection.commit()
+
+    finalResp = {}
+
+    '''Checking if the cursor did not updated any of the rows'''
+    if (cursor.rowcount != 0):  
+        finalResp = {data['orderid'] : {
+                                        "status" : "shipped",
+                                        "trackerid" : data['trackerid']
+                    }}
+    else:
+        finalResp = {
+            "status" : "unsuccessful",
+            "message" : "Unable to update the tracking number, please reach out to the developer"
+        }
+
+    return json.dumps(finalResp)
     
 
 if __name__ == '__main__':
