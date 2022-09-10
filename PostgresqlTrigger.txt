@@ -1,0 +1,26 @@
+Create this trigger on the orders table
+This trigger updates the table items when an order is created
+
+CREATE or REPLACE function updateItemTableStatus()
+	returns trigger
+	LANGUAGE PLPGSQL
+as $$
+
+declare
+	score numeric;
+
+begin
+	UPDATE bitpasar.items
+	SET status = 'shipped' WHERE bitpasar.items.id = NEW.itemid;
+
+	return NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS updateItemTableStatus on bitpasar.orders;
+
+CREATE TRIGGER set_politicianScore
+	AFTER INSERT
+	ON bitpasar.orders
+	FOR EACH ROW
+EXECUTE PROCEDURE updateItemTableStatus();

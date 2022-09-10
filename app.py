@@ -334,14 +334,15 @@ def userPurchase():
             #print (finalResp)
     return json.dumps(finalResp)
 
-@app.route('/getAllAds',methods=['POST'])
-def userToShipItems():
+'''This endpoint returns all of the orders to ship and shipped out orders , getAllOrders'''
+@app.route('/getAllOrders',methods=['POST'])
+def userAllOrders():
     data = request.get_json()
     #print(data)
     connection, cursor  = initilizeConnection()
     cursor.execute("""SELECT orders.id,items.title, items.shortdescription,items.itemprice,orders.status,items.images,orders.timestamp,
                     orders.buyername as buyername, orders.buyerphonenum, orders.buyerwallet, orders.address1, orders.address2, 
-                    orders.city, orders.state, orders.zipcode, orders.postagename, orders.postageprice
+                    orders.city, orders.state, orders.zipcode, orders.postagename, orders.postageprice, orders.trackerid
                     FROM bitpasar.items AS items 
                     JOIN bitpasar.orders AS orders ON items.id = orders.itemid
                     WHERE orders.ownerwallet = '%s'"""%data['walletid'])
@@ -365,6 +366,7 @@ def userToShipItems():
             finalResp[row[0]]['zipcode'] = row[14]
             finalResp[row[0]]['postagename'] = row[15]
             finalResp[row[0]]['postageprice'] = row[16]
+            finalResp[row[0]]['trackerid'] = row[17]
             
             #print (finalResp)
     return json.dumps(finalResp)
@@ -394,6 +396,32 @@ def updateOrderTracker():
         }
 
     return json.dumps(finalResp)
+
+@app.route('/getAllAds',methods=['POST'])
+def userAllAds():
+    data = request.get_json()
+    #print(data)
+    connection, cursor  = initilizeConnection()
+    cursor.execute("""SELECT * FROM bitpasar.items WHERE ownerid = '%s'"""%(
+                        data['ownerid']))
+    response = cursor.fetchall()
+    finalResp = {}
+    for row in response:
+        finalResp[row[0]] = {}
+        finalResp[row[0]]['ownerid'] = row[1]
+        finalResp[row[0]]['title'] = row[2]
+        finalResp[row[0]]['type'] = row[3]
+        finalResp[row[0]]['shortdescription'] = row[4]
+        finalResp[row[0]]['itemprice'] = row[5]
+        finalResp[row[0]]['status'] = row[6]
+        finalResp[row[0]]['postagename'] = row[7]
+        finalResp[row[0]]['postageprice'] = row[8]
+        finalResp[row[0]]['images'] = row[9]
+        finalResp[row[0]]['longdescription'] = decodeLongDescription(row[10])
+        finalResp[row[0]]['timestamp'] = convertUTC(row[11])
+            
+            #print (finalResp)
+    return json.dumps(finalResp)    
     
 
 if __name__ == '__main__':
