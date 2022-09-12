@@ -421,7 +421,29 @@ def userAllAds():
         finalResp[row[0]]['timestamp'] = convertUTC(row[11])
             
             #print (finalResp)
-    return json.dumps(finalResp)    
+    return json.dumps(finalResp)
+
+@app.route('/deleteAds',methods=['DELETE'])
+def deleteUserAds():
+    data = request.get_json()
+    #print(data)
+    connection, cursor  = initilizeConnection()
+    cursor.execute("""DELETE FROM bitpasar.items WHERE id = '%s' """
+                  %(data['id']))
+    connection.commit()
+
+    if (cursor.rowcount != 0):  
+         finalResp = {
+            "status" : "successful",
+            "message" : "Item has been successfully deleted"
+        }
+    else:
+        finalResp = {
+            "status" : "unsuccessful",
+            "message" : "Unable to update the tracking number, please reach out to the developer"
+        }
+
+    return json.dumps(finalResp)  
     
 
 if __name__ == '__main__':
