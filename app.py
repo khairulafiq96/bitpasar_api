@@ -1,4 +1,6 @@
 from email import header, message
+from multiprocessing import connection
+from sqlite3 import Cursor
 from typing import final
 from urllib import response
 from flask import Flask, request
@@ -7,16 +9,32 @@ import psycopg2
 import base64
 import math
 import calendar
+import pyrebase
 
 app = Flask(__name__)
 
 '''DATABASE_URL = os.environ['DATABASE_URL']'''
+firebaseConfig = {
+    "apiKey": "AIzaSyDUnl86TI-bpWFD0NAaOrKTTm6msdmYvyU",
+    "authDomain": "bitpasar.firebaseapp.com",
+    "projectId": "bitpasar",
+    "storageBucket": "bitpasar.appspot.com",
+    "messagingSenderId": "782221905508",
+    "appId": "1:782221905508:web:eed2befb480366548d1971",
+    "databaseURL" : ""
+}
 
 def initilizeConnection():
     print("Initializing connection")
     connection = psycopg2.connect("dbname=postgres user=postgres password=admin")
     cursor = connection.cursor()
     return connection, cursor
+
+def initializeFirebase():
+    firebase = pyrebase.initialize_app(firebaseConfig)
+    storage = firebase.storage()
+    print("Firebase Storage is initialized")
+    return storage
 
 def convertUTC(dt):
     return calendar.timegm(dt.utctimetuple())
@@ -345,7 +363,7 @@ def userAllOrders():
                     orders.city, orders.state, orders.zipcode, orders.postagename, orders.postageprice, orders.trackerid
                     FROM bitpasar.items AS items 
                     JOIN bitpasar.orders AS orders ON items.id = orders.itemid
-                    WHERE orders.ownerwallet = '%s'"""%data['walletid'])
+                    WHERE orders.ownerid = '%s'"""%data['ownerid'])
     response = cursor.fetchall()
     finalResp = {}
     for row in response:
@@ -443,8 +461,77 @@ def deleteUserAds():
             "message" : "Unable to update the tracking number, please reach out to the developer"
         }
 
-    return json.dumps(finalResp)  
-    
+    return json.dumps(finalResp)
+
+
+'''
+Before developing the future enhancement, 
+the structure of the of the storage would be : 
+images/{itemid}/images_name.jpg
+
+This would improve on effeciency as firebase.listAll will be calling
+all of the images path/name
+
+This would effect a lot of the variables in the React code.
+
+Future enchancement : 
+To ensure all of the images stored in firebase are deleted correctly,
+1. List all of the image path from DB
+2. Get all of the images path and name from Firebase
+3. Compare between the database path from DB and Firebase
+4. Only matching values will be deleted
+5. If the deletion failed, break the code and return as status failed
+6. If all of the deletion of images are successful, the code proceeds to
+delete the user data in the db
+'''
+
+@app.route('/deleteUser',methods=['DELETE'])
+def userDeletion():
+    data = request.get_json()
+    storage = initializeFirebase()
+    connection, cursor = initilizeConnection()
+    cursor.execute('''
+                    SELECT images from bitpasar.items WHERE ownerid = 'TEST'
+                    ''')
+    response = cursor.fetchall()
+    finalResp = {}
+    '''As the column is an array, a nested loop is required to extract the individual URL'''
+    for row in response:
+        for url in row:
+            for indvURL in url:
+                '''Presumably all of the firebase deletion will be successful for alpha'''
+                firebaseDeletion(storage,indvURL)
+    cursor.execute('''DELETE FROM bitpasar.users WHERE id = '%s' '''%data['userid'])
+    connection.commit()
+
+    if (cursor.rowcount != 0):  
+         finalResp = {
+            "status" : "successful",
+            "message" : "User has been successfull deleted"
+        }
+    else:
+        finalResp = {
+            "status" : "unsuccessful",
+            "message" : "An error occurred, please reach out to the developer"
+        }
+    return json.dumps(finalResp)
+
+def firebaseDeletion(storage,url):
+    try :
+        storage.delete(decodeURItoFirebasePath(url),"")
+        print("Successful deletion of :" + decodeURItoFirebasePath(url))
+        return "success"
+    except Exception as e :
+        print(e)
+        return "failed"
+
+'''Had to convert JS to Python based on this guide
+https://stackoverflow.com/questions/56762486/how-to-get-the-firebase-storage-path-from-the-the-storage-url'''
+'''This function converts URL to readable Firebase Path format'''
+def decodeURItoFirebasePath(url):
+    url_token = url.split('?')
+    my_url = url_token[0].split('/')
+    return my_url[len(my_url) - 1].replace("%2F", "/")
 
 if __name__ == '__main__':
     app.run

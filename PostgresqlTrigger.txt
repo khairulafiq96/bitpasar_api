@@ -19,8 +19,67 @@ $$;
 
 DROP TRIGGER IF EXISTS updateItemTableStatus on bitpasar.orders;
 
-CREATE TRIGGER set_politicianScore
+CREATE TRIGGER updateItemTableStatus
 	AFTER INSERT
 	ON bitpasar.orders
 	FOR EACH ROW
 EXECUTE PROCEDURE updateItemTableStatus();
+
+Future Enhancement : 
+
+Delete orders upon user deletion
+
+USE 2 SQL statment in the same function
+
+This trigger will Update the Orders table buyer detail and owner detail 
+If buyer deletes account, it will update the buyers details into Account Deleted
+OR if seller deletes account it will update the seller details into Account Deleted
+
+The price, itemid, timestamp, will be kept
+
+WHEN DELETE from bitpasar.users
+UPDATE columns to "User Deleted"
+WHERE sellerid = '' OR ownerid = ''
+
+
+Delete marketplace items upon user deletion
+
+This trigger will delete the items table in the marketplace
+
+The price, itemid, timestamp, 
+
+WHEN DELETE from bitpasar.orders,
+DELETE * From bitpasar.items
+WHERE ownerid = ''
+
+
+-------------------------------------------------------------------------------------------------------------
+
+CREATE or REPLACE function deleteUserDetails()
+	returns trigger
+	LANGUAGE PLPGSQL
+as $$
+
+declare
+
+begin
+	DELETE FROM bitpasar.items WHERE bitpasar.items.ownerid = OLD.id;
+	return OLD;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS deleteUserDetails on bitpasar.users;
+
+CREATE TRIGGER deleteUserDetails
+	BEFORE DELETE
+	ON bitpasar.users
+	FOR EACH ROW
+EXECUTE PROCEDURE deleteUserDetails();
+
+
+
+
+TEST IMAGE deletion
+
+{https://firebasestorage.googleapis.com/v0/b/bitpasar.appspot.com/o/images%2F15154ffe-6004-426a-a517-4719d066a88b_rims3.jpg?alt=media&token=9af0e3bb-bf43-4112-ac46-6da1ffdebe8f,https://firebasestorage.googleapis.com/v0/b/bitpasar.appspot.com/o/images%2F211ddbec-b208-411f-893c-a87400c21f39_led3.jpg?alt=media&token=4416916b-f539-48d0-991b-bb5ba372dd97,https://firebasestorage.googleapis.com/v0/b/bitpasar.appspot.com/o/images%2F22f05880-cc1b-4221-97c8-1bf55e596ae6_led2.jfif?alt=media&token=6c053e57-6107-4e69-824c-e3799f4712e3}
+{https://firebasestorage.googleapis.com/v0/b/bitpasar.appspot.com/o/images%2F408c928d-ecb5-4150-bd58-d125ee1dfe5c_led1.jpg?alt=media&token=1d28f081-e361-4135-82ec-ff21380e469a,https://firebasestorage.googleapis.com/v0/b/bitpasar.appspot.com/o/images%2F412cee57-ddf3-4514-a67d-55fe3ebeb6e9_led3.jpg?alt=media&token=b4e91afd-c6b1-440c-9230-9e27fa1d46c6,https://firebasestorage.googleapis.com/v0/b/bitpasar.appspot.com/o/images%2F54161a9c-e679-4a9f-9ce0-4c237003936e_rims3.jpg?alt=media&token=242cb163-7150-4db4-a768-2349bd840051}
