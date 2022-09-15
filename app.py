@@ -10,10 +10,12 @@ import base64
 import math
 import calendar
 import pyrebase
+import os
 
 app = Flask(__name__)
 
-'''DATABASE_URL = os.environ['DATABASE_URL']'''
+DATABASE_URL = os.environ['DATABASE_URL']
+
 firebaseConfig = {
     "apiKey": "AIzaSyDUnl86TI-bpWFD0NAaOrKTTm6msdmYvyU",
     "authDomain": "bitpasar.firebaseapp.com",
@@ -26,7 +28,8 @@ firebaseConfig = {
 
 def initilizeConnection():
     print("Initializing connection")
-    connection = psycopg2.connect("dbname=postgres user=postgres password=admin")
+    'connection = psycopg2.connect("dbname=postgres user=postgres password=admin")'
+    connection = psycopg2.connect(DATABASE_URL, sslmode='require')
     cursor = connection.cursor()
     return connection, cursor
 
