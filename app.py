@@ -14,7 +14,7 @@ import os
 
 app = Flask(__name__)
 
-DATABASE_URL = os.environ['DATABASE_URL']
+'''DATABASE_URL = os.environ['DATABASE_URL']'''
 
 firebaseConfig = {
     "apiKey": "AIzaSyDUnl86TI-bpWFD0NAaOrKTTm6msdmYvyU",
@@ -28,8 +28,8 @@ firebaseConfig = {
 
 def initilizeConnection():
     print("Initializing connection")
-    'connection = psycopg2.connect("dbname=postgres user=postgres password=admin")'
-    connection = psycopg2.connect(DATABASE_URL, sslmode='require')
+    connection = psycopg2.connect("dbname=postgres user=postgres password=admin")
+    '''connection = psycopg2.connect(DATABASE_URL, sslmode='require')'''
     cursor = connection.cursor()
     return connection, cursor
 
@@ -223,7 +223,7 @@ def getFilteredMarketplace():
     offsetVal = (int(data['page']) - 1) * 5
     cursor.execute("""SELECT * FROM bitpasar.items INNER JOIN bitpasar.users ON bitpasar.items.ownerid = bitpasar.users.id WHERE bitpasar.items.status = 'new' AND bitpasar.items.title LIKE '%%%s%%' ORDER BY bitpasar.items.timestamp ASC LIMIT 5 OFFSET %s"""%(data['search'],offsetVal))
     response = cursor.fetchall()
-    'print(response)'
+    print("""SELECT * FROM bitpasar.items INNER JOIN bitpasar.users ON bitpasar.items.ownerid = bitpasar.users.id WHERE bitpasar.items.status = 'new' AND bitpasar.items.title LIKE '%%%s%%' ORDER BY bitpasar.items.timestamp ASC LIMIT 5 OFFSET %s"""%(data['search'],offsetVal))
     finalResp =  {}
     for row in response:
         finalResp[row[0]] = {}
@@ -278,10 +278,11 @@ def getIndividualItemDetail():
 
 '''Decoding to Base64, Highly inneficient, please refactor'''
 def decodeLongDescription(memory):
-    longdescencoded = memory.tobytes()
-    longdescencoded = base64.b64decode(longdescencoded)
-    longdescencoded = longdescencoded.decode('utf-8')
-    return longdescencoded
+    if(memory):
+        longdescencoded = memory.tobytes()
+        longdescencoded = base64.b64decode(longdescencoded)
+        longdescencoded = longdescencoded.decode('utf-8')
+        return longdescencoded
 
 '''Calculate total pages needed for all of the items'''
 '''This function only needs to be run once, to get the total number of page to be displayed'''
