@@ -220,10 +220,9 @@ def getFilteredMarketplace():
     data = request.get_json()
     connection, cursor  = initilizeConnection()
 
-    offsetVal = (int(data['page']) - 1) * 5
-    cursor.execute("""SELECT * FROM bitpasar.items INNER JOIN bitpasar.users ON bitpasar.items.ownerid = bitpasar.users.id WHERE bitpasar.items.status = 'new' AND bitpasar.items.title LIKE '%%%s%%' ORDER BY bitpasar.items.timestamp ASC LIMIT 5 OFFSET %s"""%(data['search'],offsetVal))
+    offsetVal = (int(data['page']) - 1) * 12
+    cursor.execute("""SELECT * FROM bitpasar.items INNER JOIN bitpasar.users ON bitpasar.items.ownerid = bitpasar.users.id WHERE bitpasar.items.status = 'new' AND bitpasar.items.title LIKE '%%%s%%' ORDER BY bitpasar.items.timestamp DESC LIMIT 12 OFFSET %s"""%(data['search'],offsetVal))
     response = cursor.fetchall()
-    print("""SELECT * FROM bitpasar.items INNER JOIN bitpasar.users ON bitpasar.items.ownerid = bitpasar.users.id WHERE bitpasar.items.status = 'new' AND bitpasar.items.title LIKE '%%%s%%' ORDER BY bitpasar.items.timestamp ASC LIMIT 5 OFFSET %s"""%(data['search'],offsetVal))
     finalResp =  {}
     for row in response:
         finalResp[row[0]] = {}
@@ -294,7 +293,7 @@ def calculateTotalPages():
     cursor.execute("""SELECT Count(*) FROM bitpasar.items WHERE status = 'new' AND title LIKE '%%%s%%' """%data['search'])
     '''Just getting one row of data'''
     rowcount = cursor.fetchone()[0]
-    totalPages = math.ceil(rowcount/5)
+    totalPages = math.ceil(rowcount/12)
     count = 1
     finalArr = []
     while count <= totalPages:
@@ -334,7 +333,7 @@ def userPurchase():
     data = request.get_json()
     #print(data)
     connection, cursor  = initilizeConnection()
-    cursor.execute("""SELECT orders.id,items.title, items.shortdescription,items.itemprice,orders.status,items.images,orders.timestamp, users.name as ownername, users.phonenum, users.walletid
+    cursor.execute("""SELECT orders.id,items.title, items.shortdescription, items.itemprice, orders.status, items.images, orders.timestamp, orders.postagename, orders.postageprice, orders.trackerid, users.name as ownername, users.phonenum, users.walletid
                         FROM bitpasar.items AS items 
                         JOIN bitpasar.orders AS orders ON items.id = orders.itemid
                         JOIN bitpasar.users AS users ON items.ownerid = users.id
@@ -349,9 +348,12 @@ def userPurchase():
             finalResp[row[0]]['status'] = row[4]
             finalResp[row[0]]['images'] = row[5][0]
             finalResp[row[0]]['timestamp'] = convertUTC(row[6])
-            finalResp[row[0]]['ownername'] = row[7]
-            finalResp[row[0]]['ownerphonenum'] = row[8]
-            finalResp[row[0]]['ownerwallet'] = row[9]
+            finalResp[row[0]]['postagename'] = row[7]
+            finalResp[row[0]]['postageprice'] = row[8]
+            finalResp[row[0]]['trackerid'] = row[9]
+            finalResp[row[0]]['ownername'] = row[10]
+            finalResp[row[0]]['ownerphonenum'] = row[11]
+            finalResp[row[0]]['ownerwallet'] = row[12]
             
             #print (finalResp)
     return json.dumps(finalResp)
