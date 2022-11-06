@@ -11,6 +11,7 @@ import math
 import calendar
 import pyrebase
 import os
+from werkzeug.exceptions import HTTPException
 
 app = Flask(__name__)
 
@@ -147,7 +148,7 @@ def getUserDetails():
     data = request.get_json()
     #print(data)
     connection, cursor  = initilizeConnection()
-    userAccountInDB = verifyUserAccount(cursor,data['walletid'] )
+    userAccountInDB = verifyUserAccount(cursor,data['walletid'])
     print(userAccountInDB)
     if userAccountInDB == 'False':
         cursor.execute("select * from bitpasar.users where walletid='%s'"% data['walletid'])
@@ -538,6 +539,21 @@ def decodeURItoFirebasePath(url):
     url_token = url.split('?')
     my_url = url_token[0].split('/')
     return my_url[len(my_url) - 1].replace("%2F", "/")
+
+'''Generic error handling for all of the endpoints'''
+@app.errorhandler(HTTPException)
+def handle_exception(e):
+    """Return JSON instead of HTML for HTTP errors."""
+    # start with the correct headers and status code from the error
+    response = e.get_response()
+    # replace the body with JSON
+    response.data = json.dumps({
+        "code": e.code,
+        "name": e.name,
+        "description": e.description,
+    })
+    response.content_type = "application/json"
+    return response
 
 if __name__ == '__main__':
     app.run
