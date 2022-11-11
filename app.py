@@ -465,7 +465,7 @@ def deleteUserAds():
     else:
         finalResp = {
             "status" : "unsuccessful",
-            "message" : "Unable to update the tracking number, please reach out to the developer"
+            "message" : "Unable to delete, please reach out to the developer"
         }
 
     return json.dumps(finalResp)
@@ -498,8 +498,8 @@ def userDeletion():
     storage = initializeFirebase()
     connection, cursor = initilizeConnection()
     cursor.execute('''
-                    SELECT images from bitpasar.items WHERE ownerid = 'TEST'
-                    ''')
+                    SELECT images from bitpasar.items WHERE ownerid = '%s'
+                    '''%data['userid'])
     response = cursor.fetchall()
     finalResp = {}
     '''As the column is an array, a nested loop is required to extract the individual URL'''
@@ -514,7 +514,7 @@ def userDeletion():
     if (cursor.rowcount != 0):  
          finalResp = {
             "status" : "successful",
-            "message" : "User has been successfull deleted"
+            "message" : "User has been successfully deleted"
         }
     else:
         finalResp = {
