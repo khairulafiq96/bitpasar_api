@@ -16,6 +16,7 @@
 # How to run
 Installing the dependencies
 > pip install -r requirements.txt
+
 Run the application
 > python -m flask run
 
